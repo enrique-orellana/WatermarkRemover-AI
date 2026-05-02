@@ -46,13 +46,7 @@ class Api:
         self.window = None
         self.process = None
         self.is_running = False
-        print(f"[DEBUG] CONFIG_FILE path: {CONFIG_FILE}")
-        print(f"[DEBUG] File exists: {os.path.exists(CONFIG_FILE)}")
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, 'r') as f:
-                print(f"[DEBUG] Raw file contents:\n{f.read()}")
         self.config = self._load_config()
-        print(f"[DEBUG] Config loaded at startup: {self.config}")
 
     def set_window(self, window):
         """Set the webview window reference"""

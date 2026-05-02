@@ -5,22 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WM REMOVER - OHIO EDITION</title>
 
-    <!-- Tailwind + Alpine + Fonts -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    <!-- Base fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Rubik+Glitch&family=Inter:wght@400;800;900&display=swap" rel="stylesheet">
-    <!-- Theme fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Dancing+Script:wght@700&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;1,400&family=Mali:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Local vendor scripts only -->
+    <script src="vendor/tailwindcss.cdn.js"></script>
+    <script defer src="vendor/alpine-3.13.3.min.js"></script>
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        mono: ['"Space Mono"', 'monospace'],
-                        glitch: ['"Rubik Glitch"', 'cursive'],
-                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Consolas', 'Monaco', '"Courier New"', 'monospace'],
+                        glitch: ['Impact', 'Haettenschweiler', '"Arial Black"', 'sans-serif'],
+                        sans: ['system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
                     },
                     colors: {
                         'void': '#050505',

@@ -5,12 +5,6 @@ $PYTHON_VERSION = "3.12.7"
 $PYTHON_DIR = "python"
 $PYTHON_EXE = "$PYTHON_DIR\python.exe"
 
-# China mirror configuration
-$CHINA_MODE = $false
-$PIP_INDEX_URL = ""
-$PIP_EXTRA_ARGS = @()
-$HF_ENDPOINT = ""
-
 # Fun facts and tips to show during installation
 $tips = @(
     @{icon="[i]"; color="Cyan"; text="Florence-2 can detect watermarks in any language - even emojis!"},
@@ -39,19 +33,7 @@ Write-Host "     WatermarkRemover-AI Setup                 " -ForegroundColor Cy
 Write-Host "  =============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check if user is in China (for mirror selection)
-Write-Host "  [?] Are you in China? (y/n)" -ForegroundColor Yellow
-Write-Host "      This will use faster mirrors for downloads" -ForegroundColor DarkGray
-$chinaChoice = Read-Host "      "
-if ($chinaChoice -eq "y" -or $chinaChoice -eq "Y") {
-    $CHINA_MODE = $true
-    $PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
-    $PIP_EXTRA_ARGS = @("-i", $PIP_INDEX_URL, "--trusted-host", "pypi.tuna.tsinghua.edu.cn")
-    $HF_ENDPOINT = "https://hf-mirror.com"
-    Write-Host "  [OK] Using China mirrors (Tsinghua PyPI + HF-Mirror)" -ForegroundColor Green
-} else {
-    Write-Host "  [OK] Using default mirrors" -ForegroundColor Green
-}
+Write-Host "  [OK] Using official package and model sources" -ForegroundColor Green
 Write-Host ""
 
 # Check if embedded Python exists
@@ -112,19 +94,10 @@ Write-Host "      Did you know?" -ForegroundColor DarkGray
 Write-Host ""
 
 # Upgrade pip and ensure build tooling is available for sdists
-if ($CHINA_MODE) {
-    & $PYTHON_EXE -m pip install --upgrade pip setuptools wheel -i $PIP_INDEX_URL --trusted-host pypi.tuna.tsinghua.edu.cn 2>&1 | Out-Null
-} else {
-    & $PYTHON_EXE -m pip install --upgrade pip setuptools wheel 2>&1 | Out-Null
-}
+& $PYTHON_EXE -m pip install --upgrade pip setuptools wheel 2>&1 | Out-Null
 
 # Install base deps with tips (legacy resolver to ignore conflicts)
-if ($CHINA_MODE) {
-    # For China: use Tsinghua mirror, skip PyTorch extra-index-url from requirements.txt
-    $process = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "--upgrade", "-r", "requirements.txt", "--no-cache-dir", "--use-deprecated=legacy-resolver", "-i", $PIP_INDEX_URL, "--trusted-host", "pypi.tuna.tsinghua.edu.cn" -NoNewWindow -PassThru
-} else {
-    $process = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "--upgrade", "-r", "requirements.txt", "--no-cache-dir", "--use-deprecated=legacy-resolver" -NoNewWindow -PassThru
-}
+$process = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "--upgrade", "-r", "requirements.txt", "--no-cache-dir", "--use-deprecated=legacy-resolver" -NoNewWindow -PassThru
 
 $lastTipTime = Get-Date
 $currentTip = Get-Random -Maximum $tips.Count
@@ -158,11 +131,7 @@ if ($verifyResult -ne "OK") {
 
 # Install iopaint separately without pulling its deps (we already have ours)
 Write-Host "  [*] Installing iopaint (no deps)..." -ForegroundColor Cyan
-if ($CHINA_MODE) {
-    $iopaintProcess = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "--upgrade", "iopaint", "--no-deps", "--no-cache-dir", "-i", $PIP_INDEX_URL, "--trusted-host", "pypi.tuna.tsinghua.edu.cn" -NoNewWindow -PassThru
-} else {
-    $iopaintProcess = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "--upgrade", "iopaint", "--no-deps", "--no-cache-dir" -NoNewWindow -PassThru
-}
+$iopaintProcess = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "--upgrade", "iopaint", "--no-deps", "--no-cache-dir" -NoNewWindow -PassThru
 $iopaintProcess.WaitForExit()
 
 if ($iopaintProcess.ExitCode -ne 0) {
@@ -175,11 +144,7 @@ Write-Host "  [OK] iopaint installed" -ForegroundColor Green
 
 # Install iopaint's required dependencies manually (subset needed for LaMA inpainting)
 Write-Host "  [*] Installing iopaint dependencies..." -ForegroundColor Cyan
-if ($CHINA_MODE) {
-    $iopaintDepsProcess = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "pydantic", "typer", "einops", "omegaconf", "easydict", "yacs", "--no-cache-dir", "-i", $PIP_INDEX_URL, "--trusted-host", "pypi.tuna.tsinghua.edu.cn" -NoNewWindow -PassThru
-} else {
-    $iopaintDepsProcess = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "pydantic", "typer", "einops", "omegaconf", "easydict", "yacs", "--no-cache-dir" -NoNewWindow -PassThru
-}
+$iopaintDepsProcess = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "pydantic", "typer", "einops", "omegaconf", "easydict", "yacs", "--no-cache-dir" -NoNewWindow -PassThru
 $iopaintDepsProcess.WaitForExit()
 
 if ($iopaintDepsProcess.ExitCode -ne 0) {
@@ -200,11 +165,7 @@ if ($verifyIopaint -ne "OK") {
     # Try installing one by one to identify issues
     $deps = @("pydantic", "typer", "einops", "omegaconf", "easydict", "yacs")
     foreach ($dep in $deps) {
-        if ($CHINA_MODE) {
-            & $PYTHON_EXE -m pip install $dep --no-cache-dir -i $PIP_INDEX_URL --trusted-host pypi.tuna.tsinghua.edu.cn 2>&1 | Out-Null
-        } else {
-            & $PYTHON_EXE -m pip install $dep --no-cache-dir 2>&1 | Out-Null
-        }
+        & $PYTHON_EXE -m pip install $dep --no-cache-dir 2>&1 | Out-Null
     }
 
     # Verify again
@@ -286,24 +247,11 @@ Write-Host ""
 Write-Host "      Did you know?" -ForegroundColor DarkGray
 Write-Host ""
 
-if ($CHINA_MODE) {
-    # Set HF_ENDPOINT environment variable for China mirror
-    $env:HF_ENDPOINT = $HF_ENDPOINT
-    Write-Host "      Using HF-Mirror for faster download in China" -ForegroundColor DarkGray
-    $florenceScript = @"
-import os
-os.environ['HF_ENDPOINT'] = '$HF_ENDPOINT'
+$florenceScript = @"
 from huggingface_hub import snapshot_download
 snapshot_download('florence-community/Florence-2-large', local_dir_use_symlinks=False)
 print('FLORENCE_OK')
 "@
-} else {
-    $florenceScript = @"
-from huggingface_hub import snapshot_download
-snapshot_download('florence-community/Florence-2-large', local_dir_use_symlinks=False)
-print('FLORENCE_OK')
-"@
-}
 
 $florenceProcess = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-c", "`"$florenceScript`"" -NoNewWindow -PassThru
 
