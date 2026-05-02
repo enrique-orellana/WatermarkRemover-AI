@@ -22,6 +22,21 @@ else
     echo "  [*] Detected Windows/Other"
 fi
 
+GPU_BACKEND="cpu"
+GPU_NAME="CPU"
+if command -v nvidia-smi &> /dev/null; then
+    GPU_BACKEND="cuda"
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -n 1 2>/dev/null || echo "NVIDIA GPU")
+elif [[ "$OS_TYPE" == "linux" ]] && command -v lspci &> /dev/null; then
+    if lspci | grep -Eqi 'AMD|Advanced Micro Devices|Radeon'; then
+        GPU_BACKEND="rocm"
+        GPU_NAME="AMD Radeon GPU"
+    fi
+fi
+
+echo "  [OK] Detected GPU backend: $GPU_BACKEND ($GPU_NAME)"
+echo ""
+
 # Check Python version
 PYTHON_CMD=""
 for cmd in python3.12 python3.11 python3.10 python3 python; do
@@ -63,23 +78,20 @@ fi
 # Skip pip self-upgrade (can fail on some Windows Python installs)
 echo "  [*] Skipping pip self-upgrade"
 
-# Install PyTorch based on platform
+# Install PyTorch based on platform/backend
 echo "  [*] Installing PyTorch..."
 if [ "$OS_TYPE" == "macos" ]; then
-    # macOS: Install from main PyPI (supports MPS on Apple Silicon)
-    pip install "torch>=2.4.0" "torchvision>=0.19.0" --no-cache-dir -q
-    echo "  [OK] PyTorch installed (MPS support on Apple Silicon)"
+    pip install "torch==2.9.0" "torchvision==0.24.0" --no-cache-dir -q
+    echo "  [OK] PyTorch installed (macOS)"
+elif [ "$GPU_BACKEND" == "cuda" ]; then
+    pip install "torch==2.9.0" "torchvision==0.24.0" --index-url https://download.pytorch.org/whl/cu126 --no-cache-dir -q
+    echo "  [OK] PyTorch installed (CUDA 12.6)"
+elif [ "$GPU_BACKEND" == "rocm" ]; then
+    pip install "torch==2.9.0" "torchvision==0.24.0" --index-url https://download.pytorch.org/whl/rocm6.4 --no-cache-dir -q
+    echo "  [OK] PyTorch installed (ROCm 6.4)"
 else
-    # Linux: Try CUDA first, fallback to CPU
-    if command -v nvidia-smi &> /dev/null; then
-        echo "  [*] NVIDIA GPU detected, installing CUDA version..."
-        pip install "torch>=2.4.0" "torchvision>=0.19.0" --extra-index-url https://download.pytorch.org/whl/cu124 --no-cache-dir -q
-        echo "  [OK] PyTorch installed (CUDA 12.4)"
-    else
-        echo "  [*] No NVIDIA GPU detected, installing CPU version..."
-        pip install "torch>=2.4.0" "torchvision>=0.19.0" --no-cache-dir -q
-        echo "  [OK] PyTorch installed (CPU)"
-    fi
+    pip install "torch==2.9.0" "torchvision==0.24.0" --index-url https://download.pytorch.org/whl/cpu --no-cache-dir -q
+    echo "  [OK] PyTorch installed (CPU)"
 fi
 
 # Install other dependencies (without torch lines)

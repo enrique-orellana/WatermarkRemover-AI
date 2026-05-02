@@ -35,7 +35,7 @@ https://github.com/user-attachments/assets/505be2a8-8eda-4def-90b6-5a4ceefee456
 - **Batch Processing** - Handle entire folders at once
 - **Preview Mode** - Preview detected watermarks before processing
 - **Fade In/Out Handling** - Extend masks for watermarks that fade in/out
-- **GPU Acceleration** - CUDA support for faster processing
+- **GPU Acceleration** - NVIDIA CUDA, AMD ROCm on Linux, and AMD DirectML on Windows
 - **Multi-Language UI** - Available in English, French, Chinese, Japanese, Portuguese, and more
 - **Themes** - Multiple UI themes to choose from
 
@@ -46,6 +46,8 @@ https://github.com/user-attachments/assets/505be2a8-8eda-4def-90b6-5a4ceefee456
 ### Windows
 
 The setup script downloads a portable Python environment automatically - no system Python required.
+
+On NVIDIA GPUs, it installs the CUDA build of PyTorch. On AMD GPUs, it uses DirectML on Windows when available.
 
 ```powershell
 git clone https://github.com/D-Ogi/WatermarkRemover-AI.git
@@ -58,6 +60,8 @@ After setup, double-click `run.bat` to launch the app.
 ### Linux / macOS
 
 Requires Python 3.10+ installed on your system.
+
+On Linux with an AMD GPU, the setup script installs the ROCm build of PyTorch for hardware acceleration. That is the recommended full-power path for an RX 9070 XT.
 
 ```bash
 git clone https://github.com/D-Ogi/WatermarkRemover-AI.git
@@ -89,6 +93,8 @@ Install FFmpeg to preserve audio when processing videos:
 6. Hit **Start Processing**
 
 Your settings are automatically saved and restored on next launch.
+
+If auto-detection picks the wrong backend, set `WMR_DEVICE` to `auto`, `cpu`, `cuda`, `rocm`, or `directml` before launching.
 
 ### CLI Mode
 

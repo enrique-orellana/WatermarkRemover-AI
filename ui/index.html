@@ -375,7 +375,7 @@
                 <div class="flex gap-4">
                     <span class="flex items-center gap-1">
                         <span class="w-2 h-2 rounded-full" :class="systemInfo.cuda ? 'bg-neon-green' : 'bg-red-500'"></span>
-                        <span x-text="t.status_bar?.cuda || 'CUDA'"></span>: <span x-text="systemInfo.cuda ? (t.status_bar?.on || 'ON') : (t.status_bar?.off || 'OFF')"></span>
+                        <span x-text="t.status_bar?.gpu || 'GPU'"></span>: <span x-text="systemInfo.cuda ? (t.status_bar?.on || 'ON') : (t.status_bar?.off || 'OFF')"></span>
                     </span>
                     <span class="flex items-center gap-1">
                         <span class="w-2 h-2 rounded-full" :class="systemInfo.ffmpeg ? 'bg-neon-green' : 'bg-yellow-500'"></span>
@@ -566,6 +566,7 @@
                 logs: [],
                 systemInfo: {
                     cuda: false,
+                    backend: 'cpu',
                     ram: 0,
                     gpu: 'Checking...',
                     ffmpeg: false
@@ -724,6 +725,7 @@
                         try {
                             const info = await pywebview.api.get_static_info();
                             this.systemInfo.cuda = info.cuda;
+                            this.systemInfo.backend = info.backend || 'cpu';
                             this.systemInfo.gpu = info.gpu_name || 'CPU MODE';
                             this.systemInfo.ffmpeg = info.ffmpeg;
                         } catch (e) {

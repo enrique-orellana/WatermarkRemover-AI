@@ -174,6 +174,7 @@ class Api:
         """Get static system info (CUDA, FFmpeg, GPU) - call once on startup"""
         info = {
             'cuda': False,
+            'backend': 'cpu',
             'gpu_name': None,
             'ffmpeg': False
         }
@@ -181,17 +182,30 @@ class Api:
         # Windows: hide console windows for subprocesses
         creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
 
-        # Check CUDA via subprocess (avoid importing torch in GUI)
+        # Check GPU backend via subprocess (avoid importing torch in GUI)
         try:
             result = subprocess.run(
-                [sys.executable, '-c', 'import torch; print("CUDA:" + str(torch.cuda.is_available()) + ":" + (torch.cuda.get_device_name(0) if torch.cuda.is_available() else ""))'],
+                [
+                    sys.executable,
+                    '-c',
+                    (
+                        'import json; '
+                        'from device_utils import select_runtime_device; '
+                        'runtime = select_runtime_device(); '
+                        'print(json.dumps({'
+                        '    "backend": runtime.backend,'
+                        '    "gpu_name": runtime.label,'
+                        '    "gpu_active": runtime.backend != "cpu"'
+                        '}))'
+                    ),
+                ],
                 capture_output=True, text=True, timeout=10, creationflags=creationflags
             )
-            if result.returncode == 0 and 'CUDA:' in result.stdout:
-                parts = result.stdout.strip().split(':')
-                info['cuda'] = parts[1] == 'True'
-                if len(parts) > 2 and parts[2]:
-                    info['gpu_name'] = parts[2]
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout.strip())
+                info['backend'] = data.get('backend', 'cpu')
+                info['cuda'] = bool(data.get('gpu_active', False))
+                info['gpu_name'] = data.get('gpu_name')
         except Exception:
             pass
 

@@ -1,7 +1,5 @@
-# Core AI/ML - CUDA 12.4 versions
---extra-index-url https://download.pytorch.org/whl/cu124
-torch>=2.4.0
-torchvision>=0.19.0
+# Core AI/ML
+# Backend-specific PyTorch installation is handled by the setup scripts.
 transformers>=4.50.0
 diffusers>=0.30.0
 numpy<2

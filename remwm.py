@@ -23,6 +23,8 @@ import tempfile
 import shutil
 import subprocess
 
+from device_utils import select_runtime_device
+
 try:
     from cv2.typing import MatLike
 except ImportError:
@@ -71,7 +73,7 @@ class TaskType(str, Enum):
     OPEN_VOCAB_DETECTION = "<OPEN_VOCABULARY_DETECTION>"
     """Detect bounding box for objects and OCR text"""
 
-def identify(task_prompt: TaskType, image: MatLike, text_input: str, model: Florence2ForConditionalGeneration, processor: AutoProcessor, device: str):
+def identify(task_prompt: TaskType, image: MatLike, text_input: str, model: Florence2ForConditionalGeneration, processor: AutoProcessor, device):
     if not isinstance(task_prompt, TaskType):
         raise ValueError(f"task_prompt must be a TaskType, but {task_prompt} is of type {type(task_prompt)}")
 
@@ -94,7 +96,7 @@ def identify(task_prompt: TaskType, image: MatLike, text_input: str, model: Flor
         generated_text, task=task_prompt.value, image_size=(image.width, image.height)
     )
 
-def get_watermark_mask(image: MatLike, model: Florence2ForConditionalGeneration, processor: AutoProcessor, device: str, max_bbox_percent: float, detection_prompt: str = "watermark"):
+def get_watermark_mask(image: MatLike, model: Florence2ForConditionalGeneration, processor: AutoProcessor, device, max_bbox_percent: float, detection_prompt: str = "watermark"):
     """
     Detect watermarks and create a mask for inpainting.
 
@@ -126,7 +128,7 @@ def get_watermark_mask(image: MatLike, model: Florence2ForConditionalGeneration,
     return mask
 
 
-def detect_only(image: MatLike, model: Florence2ForConditionalGeneration, processor: AutoProcessor, device: str, max_bbox_percent: float, detection_prompt: str = "watermark"):
+def detect_only(image: MatLike, model: Florence2ForConditionalGeneration, processor: AutoProcessor, device, max_bbox_percent: float, detection_prompt: str = "watermark"):
     """
     Detect watermarks and return bounding boxes WITHOUT creating mask or inpainting.
     Used for preview mode to show what would be detected.
@@ -589,11 +591,11 @@ def main(input_path: str, output_path: str, preview: bool, overwrite: bool, tran
         from io import BytesIO
         import random
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        runtime = select_runtime_device()
+        device = runtime.device
 
-        # Force no dtype for CUDA (intentional default)
-        # Apply float32 for CPU (compatibility)
-        model_dtype = torch.float32 if device == "cpu" else None
+        # Use float32 on CPU/DirectML for compatibility and float16 on GPU backends.
+        model_dtype = runtime.model_dtype
 
         florence_model = Florence2ForConditionalGeneration.from_pretrained(
             "florence-community/Florence-2-large",
@@ -666,12 +668,12 @@ def main(input_path: str, output_path: str, preview: bool, overwrite: bool, tran
     # ========== NORMAL PROCESSING MODE ==========
     output_path = Path(output_path)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}")
+    runtime = select_runtime_device()
+    device = runtime.device
+    print(f"Using device: {runtime.label}")
 
-    # Force no dtype for CUDA (intentional default)
-    # Apply float32 for CPU (compatibility)
-    model_dtype = torch.float32 if device == "cpu" else None
+    # Use float32 on CPU/DirectML for compatibility and float16 on GPU backends.
+    model_dtype = runtime.model_dtype
 
     florence_model = Florence2ForConditionalGeneration.from_pretrained(
         "florence-community/Florence-2-large",

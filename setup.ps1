@@ -36,6 +36,32 @@ Write-Host ""
 Write-Host "  [OK] Using official package and model sources" -ForegroundColor Green
 Write-Host ""
 
+function Get-GpuBackend {
+    try {
+        $controllers = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -notmatch "Microsoft Basic Display Adapter" }
+        $gpuName = ($controllers | Select-Object -First 1 -ExpandProperty Name)
+        if (-not $gpuName) {
+            return @{ backend = "cpu"; name = "CPU" }
+        }
+
+        if ($gpuName -match "NVIDIA") {
+            return @{ backend = "cuda"; name = $gpuName }
+        }
+
+        if ($gpuName -match "AMD|Radeon|ATI") {
+            return @{ backend = "directml"; name = $gpuName }
+        }
+
+        return @{ backend = "cpu"; name = $gpuName }
+    } catch {
+        return @{ backend = "cpu"; name = "CPU" }
+    }
+}
+
+$gpu = Get-GpuBackend
+Write-Host "  [OK] Detected GPU backend: $($gpu.backend) ($($gpu.name))" -ForegroundColor Green
+Write-Host ""
+
 # Check if embedded Python exists
 if (-not (Test-Path $PYTHON_EXE)) {
     Write-Host "  [*] Downloading Python $PYTHON_VERSION..." -ForegroundColor Cyan
@@ -96,6 +122,16 @@ Write-Host ""
 # Upgrade pip and ensure build tooling is available for sdists
 & $PYTHON_EXE -m pip install --upgrade pip setuptools wheel 2>&1 | Out-Null
 
+# Install PyTorch based on the detected backend
+Write-Host "  [*] Installing PyTorch runtime..." -ForegroundColor Cyan
+if ($gpu.backend -eq "cuda") {
+    & $PYTHON_EXE -m pip install "torch==2.9.0" "torchvision==0.24.0" --index-url https://download.pytorch.org/whl/cu126 --no-cache-dir 2>&1 | Out-Null
+} elseif ($gpu.backend -eq "directml") {
+    & $PYTHON_EXE -m pip install torch-directml --no-cache-dir 2>&1 | Out-Null
+} else {
+    & $PYTHON_EXE -m pip install "torch==2.9.0" "torchvision==0.24.0" --index-url https://download.pytorch.org/whl/cpu --no-cache-dir 2>&1 | Out-Null
+}
+
 # Install base deps with tips (legacy resolver to ignore conflicts)
 $process = Start-Process -FilePath $PYTHON_EXE -ArgumentList "-m", "pip", "install", "--upgrade", "-r", "requirements.txt", "--no-cache-dir", "--use-deprecated=legacy-resolver" -NoNewWindow -PassThru
 
@@ -119,7 +155,11 @@ while (-not $process.HasExited) {
 Write-Host "`r                                                                                              "
 
 # Legacy resolver can return non-zero even on success, so verify key packages
-$verifyResult = & $PYTHON_EXE -c "import torch; import transformers; import webview; import cv2; print('OK')" 2>&1
+if ($gpu.backend -eq "directml") {
+    $verifyResult = & $PYTHON_EXE -c "import torch; import torch_directml; import transformers; import webview; import cv2; print('OK')" 2>&1
+} else {
+    $verifyResult = & $PYTHON_EXE -c "import torch; import transformers; import webview; import cv2; print('OK')" 2>&1
+}
 if ($verifyResult -ne "OK") {
     if ($process.ExitCode -ne 0) {
         Write-Host ""
