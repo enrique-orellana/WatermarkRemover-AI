@@ -124,6 +124,7 @@ Write-Host ""
 
 # Install PyTorch based on the detected backend
 Write-Host "  [*] Installing PyTorch runtime..." -ForegroundColor Cyan
+& $PYTHON_EXE -m pip uninstall -y torch torchvision torch-directml 2>&1 | Out-Null
 if ($gpu.backend -eq "cuda") {
     & $PYTHON_EXE -m pip install "torch==2.9.0" "torchvision==0.24.0" --index-url https://download.pytorch.org/whl/cu126 --no-cache-dir 2>&1 | Out-Null
 } elseif ($gpu.backend -eq "directml") {
@@ -156,11 +157,20 @@ Write-Host "`r                                                                  
 
 # Legacy resolver can return non-zero even on success, so verify key packages
 if ($gpu.backend -eq "directml") {
-    $verifyResult = & $PYTHON_EXE -c "import torch; import torch_directml; import transformers; import webview; import cv2; print('OK')" 2>&1
+    $verifyResult = & $PYTHON_EXE -c "import torch; import torch_directml; import transformers; import webview; import cv2; dml = torch_directml.device(); a = torch.tensor([1]).to(dml); b = torch.tensor([2]).to(dml); print((a + b).item())" 2>&1
 } else {
     $verifyResult = & $PYTHON_EXE -c "import torch; import transformers; import webview; import cv2; print('OK')" 2>&1
 }
-if ($verifyResult -ne "OK") {
+if ($gpu.backend -eq "directml") {
+    if ($verifyResult -notmatch "^3\s*$") {
+        if ($process.ExitCode -ne 0) {
+            Write-Host ""
+            Write-Host "  [X] Failed to install dependencies" -ForegroundColor Red
+            Read-Host "  Press Enter to exit"
+            exit 1
+        }
+    }
+} elseif ($verifyResult -ne "OK") {
     if ($process.ExitCode -ne 0) {
         Write-Host ""
         Write-Host "  [X] Failed to install dependencies" -ForegroundColor Red
