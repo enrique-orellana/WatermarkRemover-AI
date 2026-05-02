@@ -23,6 +23,7 @@ This fork keeps the original app idea, but changes the runtime and installer so 
 - **Cleaner dependency stack** - Package versions are pinned to combinations that work with Florence-2, LaMA, and the GPU backends in this fork. This avoids the import crashes caused by newer incompatible wheels.
 - **Trusted installation sources** - The setup scripts were simplified to use official package and model sources only, with no mirror/trusted-host shortcuts.
 - **Less fragile inpainting load path** - LaMA is loaded directly instead of pulling the whole `iopaint` model manager, which avoids importing optional model code that is not needed for watermark removal.
+- **Windows AMD caveat** - DirectML is used for the Florence-2 detection path on Windows AMD systems, but the LaMA TorchScript inpainting checkpoint still falls back to CPU there because that model cannot be moved to DirectML reliably in this setup. On Linux with ROCm, the GPU path is the stronger option.
 
 ## Screenshot
 

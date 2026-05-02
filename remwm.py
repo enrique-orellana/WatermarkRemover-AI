@@ -48,20 +48,32 @@ def download_lama_model():
         return False
 
 
-def load_lama_model(device):
-    """Load LaMA model, downloading if necessary."""
-    try:
-        from iopaint.model.lama import LaMa
+def load_lama_model(device, backend: str = "auto"):
+    """Load LaMA model, downloading if necessary.
 
-        return LaMa(device)
+    DirectML cannot reliably move this TorchScript checkpoint onto the GPU in
+    this environment, so we fall back to CPU there instead of crashing.
+    """
+    from iopaint.model.lama import LaMa
+
+    target_device = device
+    if backend == "directml":
+        logger.warning("DirectML cannot load the LaMA TorchScript model reliably here; using CPU for inpainting.")
+        target_device = torch.device("cpu")
+
+    try:
+        return LaMa(target_device)
     except Exception as e:
         if "not downloaded" in str(e).lower() or "unsupported model: lama" in str(e).lower():
             print("LaMA model not available, attempting to download...")
             if download_lama_model():
-                from iopaint.model.lama import LaMa
-                return LaMa(device)
-            else:
-                raise RuntimeError("Failed to download LaMA model. Please run manually: python\\python.exe -m iopaint download --model lama")
+                return LaMa(target_device)
+            raise RuntimeError(
+                "Failed to download LaMA model. Please run manually: python\\python.exe -m iopaint download --model lama"
+            )
+        if backend != "directml" and target_device != torch.device("cpu"):
+            logger.warning(f"Failed to load LaMA on {target_device}; retrying on CPU: {e}")
+            return LaMa(torch.device("cpu"))
         raise
 
 class TaskType(str, Enum):
@@ -677,7 +689,7 @@ def main(input_path: str, output_path: str, preview: bool, overwrite: bool, tran
     logger.info("Florence-2 Model loaded")
 
     if not transparent:
-        model_manager = load_lama_model(device)
+        model_manager = load_lama_model(device, runtime.backend)
         logger.info("LaMa model loaded")
     else:
         model_manager = None
