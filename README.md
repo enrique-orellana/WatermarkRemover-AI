@@ -14,6 +14,16 @@
 
 It uses Florence-2 from Microsoft for watermark identification and LaMA for inpainting to fill in the removed regions naturally. The software features a modern GUI built with PyWebview for an accessible and intuitive experience.
 
+## Fork Notes
+
+This fork keeps the original app idea, but changes the runtime and installer so it is easier to run on modern GPUs and easier to trust.
+
+- **AMD GPU support** - The original repo was mostly CUDA-oriented. This fork adds automatic backend selection for NVIDIA CUDA, AMD DirectML on Windows, and AMD ROCm on Linux so the app can use your GPU instead of falling back to CPU.
+- **Safer startup path** - The Windows launcher now uses the local virtual environment, and the runtime avoids hardcoded `.cuda()` calls so device placement matches the selected backend.
+- **Cleaner dependency stack** - Package versions are pinned to combinations that work with Florence-2, LaMA, and the GPU backends in this fork. This avoids the import crashes caused by newer incompatible wheels.
+- **Trusted installation sources** - The setup scripts were simplified to use official package and model sources only, with no mirror/trusted-host shortcuts.
+- **Less fragile inpainting load path** - LaMA is loaded directly instead of pulling the whole `iopaint` model manager, which avoids importing optional model code that is not needed for watermark removal.
+
 ## Screenshot
 
 ![App Screenshot](assets/screenshot-preview.png)
@@ -50,7 +60,7 @@ The setup script downloads a portable Python environment automatically - no syst
 On NVIDIA GPUs, it installs the CUDA build of PyTorch. On AMD GPUs, it uses DirectML on Windows when available.
 
 ```powershell
-git clone https://github.com/D-Ogi/WatermarkRemover-AI.git
+git clone git@github.com:enrique-orellana/WatermarkRemover-AI.git
 cd WatermarkRemover-AI
 .\setup.ps1
 ```
@@ -64,7 +74,7 @@ Requires Python 3.10+ installed on your system.
 On Linux with an AMD GPU, the setup script installs the ROCm build of PyTorch for hardware acceleration. That is the recommended full-power path for an RX 9070 XT.
 
 ```bash
-git clone https://github.com/D-Ogi/WatermarkRemover-AI.git
+git clone git@github.com:enrique-orellana/WatermarkRemover-AI.git
 cd WatermarkRemover-AI
 chmod +x setup.sh
 ./setup.sh
