@@ -1,6 +1,7 @@
 import sys
 import click
 from pathlib import Path
+from typing import Any
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
@@ -11,7 +12,6 @@ if not hasattr(huggingface_hub, 'cached_download'):
     huggingface_hub.cached_download = huggingface_hub.hf_hub_download
 
 from transformers import AutoProcessor, Florence2ForConditionalGeneration
-from iopaint.model_manager import ModelManager
 from iopaint.schema import HDStrategy, LDMSampler, InpaintRequest as Config
 import torch
 from torch.nn import Module
@@ -36,35 +36,30 @@ def download_lama_model():
     logger.info("Downloading LaMA model... (this may take a few minutes)")
     print("Downloading LaMA model (~196MB)... Please wait.")
 
-    result = subprocess.run(
-        [sys.executable, "-m", "iopaint", "download", "--model", "lama"],
-        capture_output=False,  # Show download progress
-        text=True
-    )
+    try:
+        from iopaint.model.lama import LaMa
 
-    if result.returncode != 0:
-        logger.error("Failed to download LaMA model")
+        LaMa.download()
+        logger.info("LaMA model downloaded successfully")
+        print("LaMA model downloaded!")
+        return True
+    except Exception as exc:
+        logger.error(f"Failed to download LaMA model: {exc}")
         return False
-
-    logger.info("LaMA model downloaded successfully")
-    print("LaMA model downloaded!")
-    return True
 
 
 def load_lama_model(device):
     """Load LaMA model, downloading if necessary."""
     try:
-        return ModelManager(name="lama", device=device)
-    except NotImplementedError as e:
-        if "Unsupported model: lama" in str(e):
+        from iopaint.model.lama import LaMa
+
+        return LaMa(device)
+    except Exception as e:
+        if "not downloaded" in str(e).lower() or "unsupported model: lama" in str(e).lower():
             print("LaMA model not available, attempting to download...")
             if download_lama_model():
-                # Re-import to refresh model registry
-                import importlib
-                import iopaint.model
-                importlib.reload(iopaint.model)
-                # Try again
-                return ModelManager(name="lama", device=device)
+                from iopaint.model.lama import LaMa
+                return LaMa(device)
             else:
                 raise RuntimeError("Failed to download LaMA model. Please run manually: python\\python.exe -m iopaint download --model lama")
         raise
@@ -158,7 +153,7 @@ def detect_only(image: MatLike, model: Florence2ForConditionalGeneration, proces
 
     return results
 
-def process_image_with_lama(image: MatLike, mask: MatLike, model_manager: ModelManager):
+def process_image_with_lama(image: MatLike, mask: MatLike, model_manager: Any):
     config = Config(
         ldm_steps=50,
         ldm_sampler=LDMSampler.ddim,

@@ -96,8 +96,8 @@ fi
 
 # Install other dependencies (without torch lines)
 echo "  [*] Installing other dependencies..."
-pip install "transformers>=4.50.0" "diffusers>=0.30.0" "numpy<2" --no-cache-dir -q
-pip install "opencv-python-headless>=4.8.0,<4.12.0" "Pillow>=10.0.0" --no-cache-dir -q
+pip install "transformers==4.57.0" "diffusers==0.27.2" "huggingface-hub>=0.34.0,<1.0" "numpy<2" --no-cache-dir -q
+pip install "opencv-python-headless>=4.8.0,<4.12.0" "Pillow==9.5.0" --no-cache-dir -q
 pip install "pywebview>=4.0" --no-cache-dir -q
 pip install loguru click tqdm psutil pyyaml --no-cache-dir -q
 
